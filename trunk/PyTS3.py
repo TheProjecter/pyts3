@@ -25,11 +25,22 @@ import re
 
 class ServerQuery():
 	def __init__(self, ip='127.0.0.1', query=10011):
+		"""
+		This class contains functions to connecting a TS3 Query Port and send command.
+		@param ip: IP adress of the TS3 Server
+		@type ip: str
+		@param query: Query Port of the TS3 Server. Default 10011
+		@type query: int
+		"""
 		self.IP = ip
 		self.Query = int(query)
 		self.Timeout = 3.0
 		
 	def connect(self):
+		"""
+		Open a link to the Teamspeak 3 query port
+		@return: A tulpe with a error code. Example: ('error', 0, 'ok')
+		"""
 		try:
 			self.telnet = telnetlib.Telnet(self.IP, self.Query)
 		except telnetlib.socket.error:
@@ -41,11 +52,21 @@ class ServerQuery():
 			return ('error', 0, 'ok') 
 
 	def disconnect(self):
+		"""
+		Close the link to the Teamspeak 3 query port
+		@return: ('error', 0, 'ok')
+		"""
 		self.telnet.write('quit \n')
 		self.telnet.close()
 		return ('error', 0, 'ok')
 		
 	def escaping2string(self, string):
+		"""
+		Convert the escaping string form the TS3 Query to a human string.
+		@param string: A string form the TS3 Query with ecaping.
+		@type string: str
+		@return: A human string with out escaping.
+		"""
 		string = str(string)
 		string = string.replace('\/','/')
 		string = string.replace('\s',' ')
@@ -55,6 +76,12 @@ class ServerQuery():
 		return string
 	
 	def string2escaping(self, string):
+		"""
+		Convert a human string to a TS3 Query Escaping String.
+		@param string: A normal/human string.
+		@type string: str
+		@return: A string with escaping of TS3 Query.
+		"""
 		string = str(string)
 		string = string.replace('/','\\/')
 		string = string.replace(' ','\\s')
@@ -62,6 +89,16 @@ class ServerQuery():
 		return string
 		
 	def command(self, cmd, parameter={}, option=[]):
+		"""
+		Send a command with paramters and options to the TS3 Query.
+		@param cmd: The command who wants to send.
+		@type cmd: str
+		@param parameter: A dict with paramters and value. Example: sid=2 --> {'sid':'2'}  
+		@type cmd: dict
+		@param option: A list with options. Example: –uid --> ['uid']  
+		@type option: list
+		@return: The answer of the server as tulpe with error code and message.
+		"""
 		telnetCMD = cmd
 		for key in parameter:
 			telnetCMD += " %s=%s" % (key, self.string2escaping(parameter[key]))
@@ -69,16 +106,21 @@ class ServerQuery():
 			telnetCMD += " -%s" % (i)
 		telnetCMD += '\n'
 		self.telnet.write(telnetCMD)
+		
 		data = self.telnet.read_until("ok", self.Timeout)
-		data = data.split('error')
-		status = "error" + data[1]
+		data = data.split('error ')
+		status = data[1]
+		info = data[0].split('|')
+		rinfo = []
 		
-		info = data[0]
-		infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info, re.I)
-		info = {}
-		for m in infoParser:
-			info[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+		for i in range(0,len(info)):
+			rinfo.append({}) 
+			infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info[i], re.I)
+			for m in infoParser:
+				rinfo[i][self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
 		
-		statusParser = re.finditer(r"error id=(.*?) msg=(.*?)(\Z|\s)", status, re.I)
+		statusParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", status, re.I)
+		status = {}
 		for m in statusParser:
-			return ('error', int(m.group(1)), self.escaping2string(m.group(2)), info) 
+				status[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+		return ('error', status['id'], status['msg'], status, rinfo) 
