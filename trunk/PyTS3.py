@@ -109,7 +109,6 @@ class ServerQuery():
 		
 		data = self.telnet.read_until("msg=ok", self.Timeout)
 		data = data.split('error ')
-		print data
 		status = data[1]
 		info = data[0].split('|')
 		rinfo = []
