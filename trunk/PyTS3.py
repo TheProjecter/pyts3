@@ -34,7 +34,7 @@ class ServerQuery():
 		"""
 		self.IP = ip
 		self.Query = int(query)
-		self.Timeout = 3.0
+		self.Timeout = 5.0
 		
 	def connect(self):
 		"""
@@ -107,8 +107,9 @@ class ServerQuery():
 		telnetCMD += '\n'
 		self.telnet.write(telnetCMD)
 		
-		data = self.telnet.read_until("ok", self.Timeout)
+		data = self.telnet.read_until("msg=ok", self.Timeout)
 		data = data.split('error ')
+		print data
 		status = data[1]
 		info = data[0].split('|')
 		rinfo = []
